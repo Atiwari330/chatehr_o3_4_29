@@ -9,6 +9,7 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  date,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -150,3 +151,25 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+export const patient = pgTable('Patient', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  providerId: uuid('providerId').references(() => user.id),
+  firstName: varchar('firstName', { length: 64 }).notNull(),
+  lastName: varchar('lastName', { length: 64 }).notNull(),
+  dob: date('dob').notNull(),
+  gender: varchar('gender', { length: 16 }),
+  diagnoses: varchar('diagnoses').array(),   // simple string[]
+  createdAt: timestamp('createdAt').notNull(),
+});
+export type Patient = InferSelectModel<typeof patient>;
+
+export const progressNote = pgTable('ProgressNote', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  patientId: uuid('patientId').references(() => patient.id),
+  authorId: uuid('authorId').references(() => user.id),
+  content: text('content').notNull(),
+  draft: boolean('draft').notNull().default(true),
+  createdAt: timestamp('createdAt').notNull(),
+});
+export type ProgressNote = InferSelectModel<typeof progressNote>;
