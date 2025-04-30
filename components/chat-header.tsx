@@ -3,13 +3,16 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useWindowSize } from 'usehooks-ts';
+import { useEffect, useState, memo } from 'react';
+import { getChatById } from '@/lib/db/queries';
+import { getPatientById } from '@/lib/db/queries-ehr';
 
 import { ModelSelector } from '@/components/model-selector';
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, VercelIcon } from './icons';
+import { PlusIcon, User } from 'lucide-react';
+import { VercelIcon } from './icons';
 import { useSidebar } from './ui/sidebar';
-import { memo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { type VisibilityType, VisibilitySelector } from './visibility-selector';
 import type { Session } from 'next-auth';
@@ -29,8 +32,35 @@ function PureChatHeader({
 }) {
   const router = useRouter();
   const { open } = useSidebar();
+  const [patientName, setPatientName] = useState<string | null>(null);
+  const [isLoadingPatient, setIsLoadingPatient] = useState(true);
 
   const { width: windowWidth } = useWindowSize();
+
+  useEffect(() => {
+    async function loadChatPatient() {
+      try {
+        const res = await fetch(`/api/chat?id=${chatId}`);
+        if (res.ok) {
+          const chat = await res.json();
+          
+          if (chat && chat.patientId) {
+            const patientRes = await fetch(`/api/patients/${chat.patientId}`);
+            if (patientRes.ok) {
+              const patient = await patientRes.json();
+              setPatientName(`${patient.firstName} ${patient.lastName}`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading patient info:', error);
+      } finally {
+        setIsLoadingPatient(false);
+      }
+    }
+    
+    loadChatPatient();
+  }, [chatId]);
 
   return (
     <header className="flex sticky top-0 bg-background py-1.5 items-center px-2 md:px-2 gap-2">
@@ -69,6 +99,15 @@ function PureChatHeader({
           selectedVisibilityType={selectedVisibilityType}
           className="order-1 md:order-3"
         />
+      )}
+      
+      {patientName && (
+        <div className="flex items-center gap-1 order-1 md:order-3">
+          <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-transparent bg-green-500 text-white">
+            <User className="h-3 w-3 mr-1" />
+            {patientName}
+          </div>
+        </div>
       )}
 
       <Button

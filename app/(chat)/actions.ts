@@ -6,9 +6,12 @@ import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
   updateChatVisiblityById,
+  saveChat
 } from '@/lib/db/queries';
+import { getPatientById } from '@/lib/db/queries-ehr';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
+import { generateUUID } from '@/lib/utils';
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -50,4 +53,40 @@ export async function updateChatVisibility({
   visibility: VisibilityType;
 }) {
   await updateChatVisiblityById({ chatId, visibility });
+}
+
+/**
+ * Creates a new chat with optional patient context
+ */
+export async function createChatWithClient({
+  userId,
+  patientId,
+}: {
+  userId: string;
+  patientId: string | null;
+}) {
+  const id = generateUUID();
+  
+  // If a client is selected, create a more specific title
+  let title = 'New Chat';
+  
+  if (patientId) {
+    try {
+      const patient = await getPatientById(patientId, userId);
+      if (patient) {
+        title = `Chat about ${patient.firstName} ${patient.lastName}`;
+      }
+    } catch (error) {
+      console.error('Error fetching patient for title', error);
+    }
+  }
+  
+  await saveChat({
+    id,
+    userId,
+    title,
+    patientId
+  });
+  
+  return id;
 }

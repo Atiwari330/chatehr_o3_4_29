@@ -1,7 +1,25 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/app/(auth)/auth';
-import { createPatient } from '@/lib/db/queries-ehr';
+import { createPatient, listPatientsForProvider } from '@/lib/db/queries-ehr';
 import { z } from 'zod';
+
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const patients = await listPatientsForProvider({ providerId: session.user.id });
+    return NextResponse.json(patients);
+  } catch (error) {
+    console.error('Error fetching patients:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch patients' },
+      { status: 500 }
+    );
+  }
+}
 
 // Define validation schema
 const patientSchema = z.object({

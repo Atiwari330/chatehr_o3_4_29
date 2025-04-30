@@ -1,58 +1,48 @@
-// Simplified script to add the profile column to the database
-// This script uses the existing database setup from the project
-
-const { drizzle } = require('drizzle-orm/postgres-js');
+// Simple script to directly add patientId column to the Chat table
+require('dotenv').config({ path: '.env.local' });
 const postgres = require('postgres');
-const fs = require('fs');
-const path = require('path');
 
-async function addProfileColumn() {
+async function addPatientIdColumn() {
+  if (!process.env.POSTGRES_URL) {
+    console.error('❌ POSTGRES_URL is not defined in environment');
+    process.exit(1);
+  }
+
+  console.log('⏳ Connecting to database...');
+  const sql = postgres(process.env.POSTGRES_URL, { max: 1 });
+
   try {
-    // Read the database URL from .env.local file
-    const envPath = path.join(__dirname, '..', '.env.local');
-    const envContent = fs.readFileSync(envPath, 'utf-8');
-    const postgresUrlMatch = envContent.match(/POSTGRES_URL=(.+)/);
+    console.log('⏳ Adding patientId column to Chat table...');
     
-    if (!postgresUrlMatch) {
-      console.error('❌ Could not find POSTGRES_URL in .env.local file');
-      process.exit(1);
-    }
+    // Get current column info
+    const columns = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'Chat'
+    `;
     
-    const postgresUrl = postgresUrlMatch[1].trim();
-    console.log('⏳ Connecting to database...');
+    console.log('Current columns in Chat table:', columns.map(c => c.column_name));
     
-    // Create a new database connection
-    const client = postgres(postgresUrl, { max: 1 });
+    // Add the column if it doesn't exist
+    await sql`ALTER TABLE "Chat" ADD COLUMN IF NOT EXISTS "patientId" uuid`;
     
-    try {
-      console.log('⏳ Executing SQL to add profile column...');
-      
-      // Execute the SQL directly
-      await client`ALTER TABLE "Patient" ADD COLUMN IF NOT EXISTS "profile" jsonb`;
-      
-      console.log('✅ Profile column added successfully');
-      
-      // Verify the column was added
-      const result = await client`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'Patient' AND column_name = 'profile'
-      `;
-      
-      if (result.length > 0) {
-        console.log('✅ Verified profile column exists');
-      } else {
-        console.error('❗ Could not verify profile column was added');
-      }
-      
-    } finally {
-      // Close the database connection
-      await client.end();
-      console.log('Database connection closed');
-    }
+    console.log('✅ PatientId column added successfully');
+    
+    // Verify the column was added
+    const updatedColumns = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'Chat'
+    `;
+    
+    console.log('Updated columns in Chat table:', updatedColumns.map(c => c.column_name));
+    
   } catch (error) {
-    console.error('❌ Error adding profile column:', error);
+    console.error('❌ Error adding patientId column:', error);
+  } finally {
+    await sql.end();
+    console.log('Database connection closed');
   }
 }
 
-addProfileColumn();
+addPatientIdColumn();

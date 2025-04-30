@@ -7,6 +7,7 @@ import {
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
+import { buildPatientContext } from '@/lib/ai/patient-context';
 import {
   deleteChatById,
   getChatById,
@@ -28,6 +29,38 @@ import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
 
 export const maxDuration = 60;
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return new Response('Chat ID is required', { status: 400 });
+  }
+
+  const session = await auth();
+
+  if (!session?.user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  try {
+    const chat = await getChatById({ id });
+    
+    if (!chat) {
+      return new Response('Chat not found', { status: 404 });
+    }
+    
+    if (chat.userId !== session.user.id) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    return Response.json(chat);
+  } catch (error) {
+    console.error('Error fetching chat:', error);
+    return new Response('An error occurred while fetching the chat', { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -109,11 +142,21 @@ export async function POST(request: Request) {
       ],
     });
 
+    // Check if this chat has a patient context
+    let patientContext = '';
+    if (chat && chat.patientId) {
+      patientContext = await buildPatientContext(chat.patientId, session.user.id);
+    }
+
     return createDataStreamResponse({
       execute: (dataStream) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({ 
+            selectedChatModel, 
+            requestHints,
+            patientContext 
+          }),
           messages,
           maxSteps: 5,
           experimental_activeTools:

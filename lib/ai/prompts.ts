@@ -53,16 +53,33 @@ About the origin of user's request:
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  patientContext = '',
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  patientContext?: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  const basePrompt = `${regularPrompt}\n\n${requestPrompt}`;
+
+  // Add client context if available
+  if (patientContext) {
+    const contextPrompt = `
+You are now a medical assistant for a behavioral health provider. Answer questions about the client using ONLY the information provided below.
+Do not share client information if not directly asked about this client.
+
+CLIENT CONTEXT:
+${patientContext}
+
+IMPORTANT: Base your answers only on the information provided above. If you don't know something or it's not in the client's record, say so.
+`;
+    return `${basePrompt}\n\n${contextPrompt}`;
+  }
 
   if (selectedChatModel === 'chat-model-reasoning') {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return basePrompt;
   } else {
-    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+    return `${basePrompt}\n\n${artifactsPrompt}`;
   }
 };
 
