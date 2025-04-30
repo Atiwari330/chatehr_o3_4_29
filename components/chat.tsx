@@ -51,11 +51,22 @@ export function Chat({
     experimental_throttle: 100,
     sendExtraMessageFields: true,
     generateId: generateUUID,
-    experimental_prepareRequestBody: (body) => ({
-      id,
-      message: body.messages.at(-1),
-      selectedChatModel,
-    }),
+    experimental_prepareRequestBody: (body) => {
+      const message = body.messages.at(-1);
+      console.log('Sending message:', message);
+      
+      // Ensure message has parts array with the right format
+      if (message && (!message.parts || !Array.isArray(message.parts) || message.parts.length === 0)) {
+        message.parts = [{ type: 'text', text: message.content || '' }];
+      }
+      
+      console.log('Modified message:', message);
+      return {
+        id,
+        message,
+        selectedChatModel,
+      };
+    },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },

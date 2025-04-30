@@ -35,8 +35,9 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
-    return new Response('Invalid request body', { status: 400 });
+  } catch (error) {
+    console.error('Invalid request body:', error);
+    return new Response(`Invalid request body: ${error instanceof Error ? error.message : 'Unknown error'}`, { status: 400 });
   }
 
   try {
@@ -187,8 +188,9 @@ export async function POST(request: Request) {
         return 'Oops, an error occurred!';
       },
     });
-  } catch (_) {
-    return new Response('An error occurred while processing your request!', {
+  } catch (error) {
+    console.error('Error processing chat request:', error);
+    return new Response(`An error occurred while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}`, {
       status: 500,
     });
   }
