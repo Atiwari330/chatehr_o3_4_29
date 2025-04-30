@@ -159,8 +159,9 @@ export const patient = pgTable('Patient', {
   lastName: varchar('lastName', { length: 64 }).notNull(),
   dob: date('dob').notNull(),
   gender: varchar('gender', { length: 16 }),
-  diagnoses: varchar('diagnoses').array(),   // simple string[]
+  diagnoses: varchar('diagnoses').array(),   // simple string[] - keeping for backward compatibility
   createdAt: timestamp('createdAt').notNull(),
+  profile: json('profile'),  // flexible container for ~20 extra attributes
 });
 export type Patient = InferSelectModel<typeof patient>;
 
