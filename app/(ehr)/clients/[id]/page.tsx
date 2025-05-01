@@ -21,7 +21,8 @@ import { CalendarIcon, Pencil1Icon } from '@radix-ui/react-icons';
 // Type for profile data to help TypeScript
 type PatientProfile = Record<string, any> | null | undefined;
 
-type PageProps = { params: { id: string } };
+// With PPR enabled, the params object itself is a promise
+type PageProps = { params: Promise<{ id: string }> };
 
 // Helper to safely get profile data
 const getProfileValue = (profile: PatientProfile, key: string): string => {
@@ -39,10 +40,13 @@ export default async function ClientProfilePage({ params }: PageProps) {
   const session = await auth();
   if (!session?.user) redirect('/login');
 
-  const patient = await getPatientById(params.id, session.user.id);
+  // Await the entire params object and destructure the id (per Next.js 15 docs)
+  const { id } = await params;
+  
+  const patient = await getPatientById(id, session.user.id);
   if (!patient) redirect('/clients');
 
-  const notes = await listProgressNotesForPatient(params.id);
+  const notes = await listProgressNotesForPatient(id);
   
   // Helper to get profile data or fallback
   const profile = patient.profile as PatientProfile;

@@ -23,7 +23,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const patient = await getPatientById(params.id, session.user.id);
+    const { id } = await params;
+    const patient = await getPatientById(id, session.user.id);
     
     if (!patient) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
@@ -50,7 +51,8 @@ export async function PUT(
     }
 
     // Check if patient exists and belongs to this provider
-    const existingPatient = await getPatientById(params.id, session.user.id);
+    const { id } = await params;
+    const existingPatient = await getPatientById(id, session.user.id);
     if (!existingPatient) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
     }
@@ -69,7 +71,7 @@ export async function PUT(
     // Update patient
     const { gender, diagnoses, profile, ...restData } = result.data;
     const updatedPatient = await updatePatient({
-      id: params.id,
+      id,
       ...restData,
       gender: gender || null,
       diagnoses: diagnoses || null, 
